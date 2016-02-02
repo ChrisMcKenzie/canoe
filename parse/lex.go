@@ -3,6 +3,7 @@ package parse
 import (
 	"fmt"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 )
 
@@ -45,9 +46,11 @@ const (
 	itemIf
 	itemElse
 	itemRange
+	itemFunc
 	itemNil
-	itemFunction
 	itemComplex
+	itemIdentifier
+	itemImport
 )
 
 const eof = -1
@@ -59,6 +62,15 @@ const (
 	leftComment = "/*"
 	rightComment = "*/"
 )
+
+var keywords = map[string]itemType{
+	"if": itemIf,
+	"else": itemElse,
+	"range": itemRange,
+	"nil": itemNil,
+	"func": itemFunc,
+	"import": itemImport,
+}
 
 type stateFn func(*lexer) stateFn
 
@@ -80,6 +92,7 @@ func lex(name, input string) *lexer {
 		items: make(chan item),
 	}
 
+	go l.run()
 	return l
 }
 
@@ -150,7 +163,8 @@ func (l *lexer) drain() {
 }
 
 func (l *lexer) run() {
-	for l.state = lexText; l.state != nil; {
+	l.state = lexText
+	for l.state != nil {
 		l.state = l.state(l)	
 	}
 
@@ -175,7 +189,6 @@ func lexText(l *lexer) stateFn {
 		l.emit(itemText)
 	}
 	l.emit(itemEOF)
-
 	return nil
 }
 
@@ -212,9 +225,40 @@ func lexRightDelim(l *lexer) stateFn {
 
 func lexInsideBlock(l *lexer) stateFn {
 	
-	switch l.next() {
-			
+	if strings.HasPrefix(l.input[l.pos:], rightDelim) {
+		return lexRightDelim
+	}
+	switch r := l.next(); {
+	case isAlphaNumeric(r):
+		l.backup()
+		return lexIdentifier
 	}
 
 	return lexInsideBlock
+}
+
+func lexIdentifier(l *lexer) stateFn {
+Loop:
+	for {
+		switch r := l.next(); {
+		case isAlphaNumeric(r):
+
+		default:
+			l.backup()
+			word := l.input[l.start:l.pos]
+			switch {
+			case keywords[word] > itemKeyword:
+				l.emit(keywords[word])
+			default:
+				l.emit(itemIdentifier)
+			}
+			break Loop
+		}	
+	}
+
+	return lexInsideBlock
+}
+
+func isAlphaNumeric(r rune) bool {
+	return r == '_' || unicode.IsLetter(r) || unicode.IsDigit(r)
 }
