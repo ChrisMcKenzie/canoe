@@ -41,6 +41,7 @@ const (
 	itemChar
 	itemString
 	itemVariable
+	itemSpace
 
 	itemKeyword
 	itemIf
@@ -229,11 +230,23 @@ func lexInsideBlock(l *lexer) stateFn {
 		return lexRightDelim
 	}
 	switch r := l.next(); {
+	case isSpace(r):
+		return lexSpace
+	case r == '"':
+		return lexQuote
 	case isAlphaNumeric(r):
 		l.backup()
 		return lexIdentifier
 	}
 
+	return lexInsideBlock
+}
+
+func lexSpace(l *lexer) stateFn {
+	for isSpace(l.peek()) {
+		l.next()
+	}
+	l.emit(itemSpace)
 	return lexInsideBlock
 }
 
@@ -257,6 +270,29 @@ Loop:
 	}
 
 	return lexInsideBlock
+}
+
+func lexQuote(l *lexer) stateFn {
+Loop:
+	for {
+		switch l.next() {
+		case '\\':
+			if r := l.next(); r != eof && r != '\n' {
+				break
+			}
+			fallthrough
+		case eof, '\n':
+			return l.errorf("unterminated string")
+		case '"':
+			break Loop
+		}
+	}
+	l.emit(itemString)
+	return lexInsideBlock
+}
+
+func isSpace(r rune) bool {
+	return r == ' ' || r == '\t'
 }
 
 func isAlphaNumeric(r rune) bool {
