@@ -37,11 +37,14 @@ const (
 	itemLeftDelim
 	itemRightDelim
 	itemColonEqual
+	itemLeftParen
+	itemRightParen
+	itemLeftBrace
+	itemRightBrace
 	itemNumber
-	itemChar
 	itemString
-	itemVariable
 	itemSpace
+	itemOperator
 
 	itemKeyword
 	itemIf
@@ -51,6 +54,8 @@ const (
 	itemNil
 	itemComplex
 	itemIdentifier
+	itemVariable
+	itemConstant
 	itemImport
 )
 
@@ -71,6 +76,8 @@ var keywords = map[string]itemType{
 	"nil": itemNil,
 	"func": itemFunc,
 	"import": itemImport,
+	"var": itemVariable,
+	"const": itemConstant,
 }
 
 type stateFn func(*lexer) stateFn
@@ -84,6 +91,8 @@ type lexer struct {
 	width   Pos
 	lastPos Pos
 	items   chan item
+	parenDepth int
+	braceDepth int
 }
 
 func lex(name, input string) *lexer {
@@ -234,6 +243,34 @@ func lexInsideBlock(l *lexer) stateFn {
 		return lexSpace
 	case r == '"':
 		return lexQuote
+	case r == '(':
+		l.emit(itemLeftParen)
+		l.parenDepth++
+	case r == ')':
+		l.emit(itemRightParen)
+		l.parenDepth--
+		if l.parenDepth < 0 {
+			l.errorf("unexpected closing parenthesis %#U", r)
+		}
+	case r == '{':
+		l.emit(itemLeftBrace)
+		l.braceDepth++
+	case r == '}':
+		l.emit(itemRightBrace)
+		l.braceDepth--
+		if l.braceDepth < 0 {
+			l.errorf("unexpected closing brace %#U", r)
+		}
+	case r == ':':
+		if l.next() != '=' {
+			l.errorf("expected :=")
+		}
+		l.emit(itemColonEqual)
+	case r == '&' || r == '|' || r == '>' || r == '<' || r == '=':
+		l.emit(itemOperator)
+	case r == '+' || r == '-' || ('0' <= r && r <= '9'):
+		l.backup()
+		return lexNumber
 	case isAlphaNumeric(r):
 		l.backup()
 		return lexIdentifier
@@ -289,6 +326,48 @@ Loop:
 	}
 	l.emit(itemString)
 	return lexInsideBlock
+}
+
+func lexNumber(l *lexer) stateFn {
+	if !l.scanNumber() {
+		return l.errorf("bad number syntax: %q", l.input[l.start:l.pos])
+	}
+	if sign := l.peek(); sign == '+' || sign == '-' {
+		// Complex: 1+2i. No spaces, must end in 'i'.
+		if !l.scanNumber() || l.input[l.pos-1] != 'i' {
+			return l.errorf("bad number syntax: %q", l.input[l.start:l.pos])
+		}
+		l.emit(itemComplex)
+	} else {
+		l.emit(itemNumber)
+	}
+	return lexInsideBlock
+}
+
+func (l *lexer) scanNumber() bool {
+	// Optional leading sign.
+	l.accept("+-")
+	// Is it hex?
+	digits := "0123456789"
+	if l.accept("0") && l.accept("xX") {
+		digits = "0123456789abcdefABCDEF"
+	}
+	l.acceptRun(digits)
+	if l.accept(".") {
+		l.acceptRun(digits)
+	}
+	if l.accept("eE") {
+		l.accept("+-")
+		l.acceptRun("0123456789")
+	}
+	// Is it imaginary?
+	l.accept("i")
+	// Next thing mustn't be alphanumeric.
+	if isAlphaNumeric(l.peek()) {
+		l.next()
+		return false
+	}
+	return true
 }
 
 func isSpace(r rune) bool {
