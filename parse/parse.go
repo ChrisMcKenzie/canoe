@@ -95,3 +95,7 @@ func New(name string, funcs ...map[string]interface{}) *Tree {
 		funcs: funcs,
 	}
 }
+
+func (t *Tree) Parse() {
+
+}

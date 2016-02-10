@@ -45,6 +45,10 @@ const (
 	itemString
 	itemSpace
 	itemOperator
+	itemColon
+	itemComma
+	itemSemiColon
+
 
 	itemKeyword
 	itemIf
@@ -263,9 +267,13 @@ func lexInsideBlock(l *lexer) stateFn {
 		}
 	case r == ':':
 		if l.next() != '=' {
-			l.errorf("expected :=")
+			l.emit(itemColon)
 		}
 		l.emit(itemColonEqual)
+	case r == ',':
+		l.emit(itemComma)
+	case r == ';':
+		l.emit(itemSemiColon)
 	case r == '&' || r == '|' || r == '>' || r == '<' || r == '=':
 		l.emit(itemOperator)
 	case r == '+' || r == '-' || ('0' <= r && r <= '9'):
