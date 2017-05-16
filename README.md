@@ -1,33 +1,25 @@
 Canoe
 =====
 
-Canoe is streaming template language experiment aim at providing a better experience
-than current front-end templating engines (PHP, handlebars, go-template). It 
-will accomplish this by providing a auto optimizing interpreter, as well as a toolchain for 
-testing, and formatting your templates. 
+Canoe is a Web Application serving platform for front microservice architectures allowing development teams to create small "fragments" of ui that can then be rendered client-side via a pipelining system that uses HTTP2 Server Push
 
-Canoe will offer both a CGI and HTTP interface for handling requests.
 
-**Early Example:** __Subject to change__
+## Creating An App Frame
+
+An app frame is an html file that contains `canoe-fragment` elements in places when canoe will render a fragment.
+
 ```
-<=
-  import (
-    "http"
-  )
+<html>
+  <head>
+    <title> testing canoe </title>
+  </head>
 
-  func test() {
-    res, err := http.get("http://google.com/")
-    if err != nil {
-      fatal("[ERR]:", err)
-    }
+  <body>
+    <h2> hello World </h2>
 
-    return res
-  }
-
-  log(test())
-
-  title := "hello world"
-=>
-
-<h1> {{title}} </h1>
+    <canoe-fragment href="https://my-nav-header-service:8080/"></canoe-fragment>
+  </body>
+</html>
 ```
+
+The `canoe-fragment` tag is an html custom element that will be in charge of loading and managing the state of the fragment.
