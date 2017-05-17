@@ -15,6 +15,10 @@ const (
 	DefaultFragmentTag = "canoe-fragment"
 )
 
+var (
+	uuidSpace = uuid.Must(uuid.Parse("8C6CDB3E-A15F-4C3B-992B-58D923D50BD6"))
+)
+
 // Fragment ...
 type Fragment struct {
 	ID   string
@@ -61,7 +65,6 @@ func (p *Parser) parse() {
 func (p *Parser) parseFragment(n *html.Node) {
 	if n.Type == html.ElementNode && n.Data == p.tag {
 		f := Fragment{
-			ID:   generateID(),
 			node: n,
 		}
 		for i, a := range n.Attr {
@@ -72,6 +75,8 @@ func (p *Parser) parseFragment(n *html.Node) {
 				n.Attr = append(n.Attr[:i], n.Attr[i+1:]...)
 			}
 		}
+
+		f.ID = generateID(f.Href)
 		n.Attr = append(n.Attr, html.Attribute{
 			Key: "fragment",
 			Val: f.ID,
@@ -88,7 +93,7 @@ func (p *Parser) Fragments() <-chan Fragment {
 	return p.frags
 }
 
-func generateID() string {
-	id, _ := uuid.NewUUID()
+func generateID(href string) string {
+	id := uuid.NewSHA1(uuidSpace, []byte(href))
 	return id.String()
 }

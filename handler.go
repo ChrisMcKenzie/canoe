@@ -2,8 +2,8 @@ package canoe
 
 import (
 	"fmt"
+	"log"
 	"net/http"
-	"time"
 
 	"github.com/ChrisMcKenzie/canoe/html"
 )
@@ -17,13 +17,12 @@ import (
 type Handler struct {
 	fs http.FileSystem
 
-	fragments       map[string]*html.Fragment
 	fragmentService html.FragmentService
 }
 
 // NewHandler creates a new canoe.Handler with the given http.FileSystem
-func NewHandler(fs http.FileSystem) http.Handler {
-	return &Handler{fs, make(map[string]*html.Fragment), html.NewHTTPFragmentService()}
+func NewHandler(fs http.FileSystem, frs html.FragmentService) http.Handler {
+	return &Handler{fs, frs}
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -35,9 +34,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		fmt.Println("http 1.1 in use")
 	}
 
-	fmt.Println(r.URL.Path)
-	switch r.URL.Path {
-	case "/":
+	mux := http.NewServeMux()
+
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		f, err := h.fs.Open("index.html")
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -48,22 +47,24 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 		}
 
-		for fragment := range parser.Fragments() {
-			go h.fragmentService.Prime(fragment.ID, fragment.Href)
-			fmt.Printf("pushing %s \n", fragment.ID)
-			p.Push("/fragment?id="+fragment.ID, nil)
-		}
+		h.fragmentService.Prime(p, parser.Fragments())
 		parser.Render(w)
-	case "/fragment":
-		id := r.URL.Query().Get("id")
-		fmt.Printf("loading %s\n", id)
+	})
+
+	mux.HandleFunc("/fragment/", func(w http.ResponseWriter, r *http.Request) {
+		id := r.URL.Path[len("/fragment/"):]
+
+		log.Printf("rendering fragment: %s\n", id)
+		log.Printf("loading %s\n", id)
 		h.fragmentService.Render(w, id)
-		// fmt.Fprintf(w, "<template>Fragment ID: %s</template>", id)
-	case "/body":
-		fmt.Println("sleeping")
-		time.Sleep(time.Second)
+	})
+
+	mux.HandleFunc("/body", func(w http.ResponseWriter, r *http.Request) {
+		// fmt.Println("sleeping")
+		// time.Sleep(time.Second)
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte("<template> hello </template>"))
-	}
+	})
 
+	mux.ServeHTTP(w, r)
 }

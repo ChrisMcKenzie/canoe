@@ -7,13 +7,13 @@
   <body>
     <h2> hello World </h2>
 
-    <canoe-fragment href="https://localhost:18443/body">
-      <h3>Rendering...</h3>
-    </canoe-fragment>
+    <canoe-fragment href="http://localhost:8081/header"></canoe-fragment>
 
-    <script
-        src="//cdnjs.cloudflare.com/ajax/libs/document-register-element/1.4.1/document-register-element.js"
-        >/* W3C Custom Elements */</script>
+    <canoe-fragment href="https://localhost:18443/body"></canoe-fragment>
+
+    <!-- <script -->
+    <!--     src="//cdnjs.cloudflare.com/ajax/libs/document&#45;register&#45;element/1.4.1/document&#45;register&#45;element.js" -->
+    <!--     >/* W3C Custom Elements */</script> -->
     <script>
       class CanoeFragment extends HTMLElement {
 
@@ -22,7 +22,7 @@
         }
 
         setImport(val) {
-          let href = `/fragment?id=${val}`
+          let href = `/fragment/${val}`
           let link = document.createElement('link')
           link.rel = "import"
           link.href = href
