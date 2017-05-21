@@ -63,6 +63,19 @@ func (p *Parser) parse() {
 }
 
 func (p *Parser) parseFragment(n *html.Node) {
+	// if n.Type == html.ElementNode && n.Data == "body" {
+	// 	node := &html.Node{
+	// 		Type: html.ElementNode,
+	// 		Data: "script",
+	// 		Attr: []html.Attribute{
+	// 			{
+	// 				Key: "src",
+	// 				Val: "/static/canoe.js",
+	// 			},
+	// 		},
+	// 	}
+	// 	n.AppendChild(node)
+	// }
 	if n.Type == html.ElementNode && n.Data == p.tag {
 		f := Fragment{
 			node: n,

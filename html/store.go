@@ -41,8 +41,11 @@ func NewHTTPFragmentService() *HTTPFragmentService {
 }
 
 func (fs *HTTPFragmentService) Prime(p http.Pusher, fragments <-chan Fragment) {
+	fs.mu.Lock()
+	defer fs.mu.Unlock()
 	for fragment := range fragments {
 		fs.fragments[fragment.ID] = fragment
+		p.Push("/fragment/"+fragment.ID, nil)
 	}
 }
 
@@ -92,6 +95,8 @@ func (fs *HTTPFragmentService) get(url string) ([]byte, error) {
 }
 
 func (fs *HTTPFragmentService) Render(w http.ResponseWriter, id string) {
+	fs.mu.Lock()
+	defer fs.mu.Unlock()
 	fragment := fs.fragments[id]
 	res, err := fs.get(fragment.Href)
 	if err != nil {

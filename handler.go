@@ -1,12 +1,18 @@
 package canoe
 
 import (
-	"fmt"
 	"log"
 	"net/http"
+	"path"
 
-	"github.com/ChrisMcKenzie/canoe/html"
+	"github.com/chrismckenzie/canoe/html"
 )
+
+// FragmentCache ...
+type FragmentCache interface {
+	Add(html.Fragment)
+	Get(id string) (html.Fragment, bool)
+}
 
 // Handler is an http.Handler that will parse html for fragments and resolve them
 // concurrently and push them to the client as they resolve. The client will
@@ -15,56 +21,39 @@ import (
 // In the case of HTTP/1.1 connections we will render the page on the server
 // side and send it out.
 type Handler struct {
-	fs http.FileSystem
-
-	fragmentService html.FragmentService
+	fs           http.FileSystem
+	fc           FragmentCache
+	fragmentPath string
 }
 
 // NewHandler creates a new canoe.Handler with the given http.FileSystem
-func NewHandler(fs http.FileSystem, frs html.FragmentService) http.Handler {
-	return &Handler{fs, frs}
+func NewHandler(fp string, fs http.FileSystem, fc FragmentCache) http.Handler {
+	return &Handler{fs, fc, fp}
 }
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Unlock HTTP/2 server push
 	p, ok := w.(http.Pusher)
 	if !ok {
-		// handler HTTP/1.1 case
-		// http.Error(w, "http 1.1 not supported", http.StatusInternalServerError)
-		fmt.Println("http 1.1 in use")
+		log.Println("using http 1.1")
 	}
 
-	mux := http.NewServeMux()
+	p.Push("/static/canoe.js", nil)
 
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		f, err := h.fs.Open("index.html")
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
+	f, err := h.fs.Open("index.html")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 
-		parser, err := html.NewParser(f)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
+	hp, err := html.NewParser(f)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 
-		h.fragmentService.Prime(p, parser.Fragments())
-		parser.Render(w)
-	})
+	for fragment := range hp.Fragments() {
+		h.fc.Add(fragment)
+		p.Push(path.Join(h.fragmentPath, fragment.ID), nil)
+	}
 
-	mux.HandleFunc("/fragment/", func(w http.ResponseWriter, r *http.Request) {
-		id := r.URL.Path[len("/fragment/"):]
-
-		log.Printf("rendering fragment: %s\n", id)
-		log.Printf("loading %s\n", id)
-		h.fragmentService.Render(w, id)
-	})
-
-	mux.HandleFunc("/body", func(w http.ResponseWriter, r *http.Request) {
-		// fmt.Println("sleeping")
-		// time.Sleep(time.Second)
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("<template> hello </template>"))
-	})
-
-	mux.ServeHTTP(w, r)
+	hp.Render(w)
 }

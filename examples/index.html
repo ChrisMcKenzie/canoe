@@ -1,59 +1,11 @@
 <html>
   <head>
     <title> testing canoe </title>
-
   </head>
 
   <body>
-    <h2> hello World </h2>
-
     <canoe-fragment href="http://localhost:8081/header"></canoe-fragment>
-
     <canoe-fragment href="https://localhost:18443/body"></canoe-fragment>
-
-    <!-- <script -->
-    <!--     src="//cdnjs.cloudflare.com/ajax/libs/document&#45;register&#45;element/1.4.1/document&#45;register&#45;element.js" -->
-    <!--     >/* W3C Custom Elements */</script> -->
-    <script>
-      class CanoeFragment extends HTMLElement {
-
-        set fragment(val) {
-          this.setImport(val)
-        }
-
-        setImport(val) {
-          let href = `/fragment/${val}`
-          let link = document.createElement('link')
-          link.rel = "import"
-          link.href = href
-          link.setAttribute('async', '')
-          link.onload =  this.importLoaded
-          this.innerHTML = ''
-          this.appendChild(link)
-        }
-
-        importLoaded() {
-          parent = this.parentNode
-          const t = this.import.querySelector("template")
-          const instance = t.content.cloneNode(true);
-          parent.shadowRoot.appendChild(instance);
-        }
-
-        connectedCallback() {
-          this.setImport(this.frag)
-        }
-
-        constructor() {
-          super();
-          this.attachShadow({mode: 'open'});
-          this.frag = this.getAttribute("fragment")
-        }
-
-        onload() {
-          console.log(this.import)
-        }
-      }
-      window.customElements.define('canoe-fragment', CanoeFragment);
-    </script>
+    <script src="/static/canoe.js">
   </body>
 </html>
