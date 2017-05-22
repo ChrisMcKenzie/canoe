@@ -51,3 +51,39 @@ An app frame is an html file that contains `canoe-fragment` elements in places w
 ```
 
 The `canoe-fragment` tag is an html custom element that will be in charge of loading and managing the state of the fragment.
+
+## Creating A Fragment
+
+A fragment is a piece of html wrapped in a html [`template`](https://developer.mozilla.org/en-US/docs/Web/HTML/Element/template) tag
+that is served as a microservice for you frontend application by dividing applications
+up into these fragments each portion of a web app can be developed independently from other
+portions of the app. to create a fragment simply serve up and html file that looks like this.
+
+```html
+<template>
+<style scoped>
+  h2 {
+    color: red;
+  }
+</style>
+<h2> My super awesome fragment. </h2>
+</template>
+```
+
+the `canoe-fragment` element will clone this bit of dom and place it into an
+isolated shadow dom where it have its own javascript and css that are scoped to
+the fragment.
+
+## Security
+
+Canoe strives to be a secure way to bring microservice architecture to the front-end
+it achieve this by never exposing you backend fragment services to the client.
+
+For Example when you write this.
+
+```html
+<canoe-fragment href="http://my-private-backend-fragment-server:8080/"></canoe-fragment>
+```
+canoe automatically converts this element into a client ready version which is
+given an id that points to the fragment in th canoe cache canoe then carries out 
+the retrieval of the fragment.
