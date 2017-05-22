@@ -1,7 +1,6 @@
 package canoe
 
 import (
-	"log"
 	"net/http"
 	"path"
 
@@ -33,12 +32,10 @@ func NewHandler(fp string, fs http.FileSystem, fc FragmentCache) http.Handler {
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Unlock HTTP/2 server push
-	p, ok := w.(http.Pusher)
-	if !ok {
-		log.Println("using http 1.1")
+	p, h2 := w.(http.Pusher)
+	if h2 {
+		p.Push("/static/canoe.js", nil)
 	}
-
-	p.Push("/static/canoe.js", nil)
 
 	f, err := h.fs.Open("index.html")
 	if err != nil {
@@ -52,7 +49,9 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	for fragment := range hp.Fragments() {
 		h.fc.Add(fragment)
-		p.Push(path.Join(h.fragmentPath, fragment.ID), nil)
+		if h2 {
+			p.Push(path.Join(h.fragmentPath, fragment.ID), nil)
+		}
 	}
 
 	hp.Render(w)

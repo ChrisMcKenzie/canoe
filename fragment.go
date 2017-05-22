@@ -73,6 +73,10 @@ func (fr HTTPFragmentResolver) ResolveByID(id string) ([]byte, error) {
 			return nil, err
 		}
 
+		if res.StatusCode >= http.StatusBadRequest {
+			return nil, fmt.Errorf("unable to resolve fragment: got %d", res.StatusCode)
+		}
+
 		byt, err := ioutil.ReadAll(res.Body)
 		if err != nil {
 			return nil, err

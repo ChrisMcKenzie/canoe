@@ -4,8 +4,22 @@
   </head>
 
   <body>
-    <canoe-fragment href="http://localhost:8081/header"></canoe-fragment>
-    <canoe-fragment href="https://localhost:18443/body"></canoe-fragment>
-    <script src="/static/canoe.js">
+    <h1> Welcome, to canoe </h1>
+    <canoe-fragment href="http://localhost:8081/header.html"></canoe-fragment>
+    <canoe-fragment href="http://localhost:8081/body.html"></canoe-fragment>
+    <canoe-fragment href="http://localhost:8081/footer.html"></canoe-fragment>
+    <script src="/static/canoe.js"></script>
+    <style>
+      [failed] {
+        border: 2px solid red;
+        width: 200px;
+        height: 20px;
+        display: block;
+      }
+
+      [failed]:after {
+        content: "failed to load fragment"
+      }
+    </style>
   </body>
 </html>

@@ -16,6 +16,7 @@ func main() {
 	http.Handle("/", canoe.NewHandler("/fragments/", http.Dir("examples"), c))
 
 	err := http.ListenAndServeTLS(":18443", "server.crt", "server.key", nil)
+	// err := http.ListenAndServe(":8080", nil)
 	if err != nil {
 		log.Fatal(err)
 	}
